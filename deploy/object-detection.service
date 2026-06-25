@@ -1,0 +1,17 @@
+[Unit]
+Description=Object Detection Web App (YOLOv8 + FastAPI)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/user/Side-Projects
+ExecStart=/usr/local/bin/uvicorn object_detection_app:app --host 0.0.0.0 --port 8000
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=object-detection
+
+[Install]
+WantedBy=multi-user.target
