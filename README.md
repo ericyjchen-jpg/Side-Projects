@@ -1,12 +1,14 @@
 # Object Detection App
 
-Real-time object detection from a webcam or RTSP stream using YOLOv8.
+Real-time object detection from a webcam or RTSP stream.  
+FastAPI backend · YOLOv8n inference · MJPEG stream · browser UI.
 
 ## Setup
 
 ```bash
 pip install -r requirements.txt
 python object_detection_app.py
+# Open http://localhost:8000 in your browser
 ```
 
 ## Usage
@@ -20,20 +22,35 @@ python object_detection_app.py
 
 ### Keyword matching
 
-Keywords are matched as **substrings** against YOLOv8's COCO class names, so
-`car` matches both `car` and `sportscar`, and `person` also matches `sportsperson`.
-The 80 COCO classes include everyday objects: person, bicycle, car, motorcycle,
-airplane, bus, train, truck, boat, traffic light, bird, cat, dog, horse, sheep,
-cow, elephant, bear, backpack, umbrella, handbag, bottle, cup, fork, knife,
-laptop, mouse, keyboard, phone, TV, clock, and more.
+Keywords are matched as **substrings** against YOLOv8's 80 COCO class names,
+so `car` matches both `car` and `race car`.
+Case-insensitive — `Person` and `PERSON` both work.
 
-## Architecture
+### Architecture
 
 ```
-Main thread  →  Tkinter UI
-Thread 1     →  cv2.VideoCapture grab loop  →  shared frame buffer
-Thread 2     →  YOLOv8 inference  →  annotated frame  →  canvas update (via root.after)
+Browser  ──POST /start──►  FastAPI  ──spawn──►  Background thread
+                                                    │
+                                           cv2.VideoCapture
+                                                    │
+                                           YOLOv8 inference
+                                                    │
+                                        annotated JPEG → shared buffer
+                                                    ▲
+Browser  ──GET /video_feed──►  MJPEG generator ────┘
 ```
 
-The capture and detection threads are decoupled so a slow inference pass never
-blocks the video grab, keeping buffer latency low for RTSP streams.
+## Test results
+
+| # | Test | Result |
+|---|------|--------|
+| 1 | `/status` returns JSON with model info | ✅ |
+| 2 | HTML page loads with required elements | ✅ |
+| 3 | Bad source → graceful error in status | ✅ |
+| 4 | Keywords normalised (trimmed, lowercased) | ✅ |
+| 5 | Blank keywords → detect-all mode | ✅ |
+| 6 | Conf clamped to [0.05, 0.95] | ✅ |
+| 7 | `/stop` resets running state | ✅ |
+| 8 | `/video_feed` returns `multipart/x-mixed-replace` with JPEG frames | ✅ |
+| 9 | Inference on blank image completes without error | ✅ |
+| 10 | Inference on bundled bus.jpg detects bus + persons | ✅ |
